@@ -1,0 +1,12 @@
+(load "json.zp")
+
+;(define x (json:parse 
+(define x (json:tokenize
+            "{ \"unnamed\": 10,
+               'lol': {
+                 10: 'hello',
+                 11: [1, 2]
+               }
+             }"))
+(write x)
+;(and (hash-map? x) (eq? (x "unnamed") 10) (hash-map? (x "lol")))
