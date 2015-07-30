@@ -1,0 +1,56 @@
+(define (json:lex stream)
+  (let* ((token (car stream))
+         (token-key (car token))
+         (token-value (cadr token)))
+    (cond
+      ((eq? token-key "json-array")
+        (json:lex-array token-value))
+      ((eq? token-key "json-object")
+        (json:lex-object token-value))
+      ((eq? token-key "json-num") #t)
+      ((eq? token-key "json-string") #t)
+      (else #f))))
+
+(define (json:lex-all stream)
+  (all? json:lex stream))
+
+(define (json:lex-array stream)
+  (cond
+    ((null? stream) #t)
+    ((= 1 (length stream))
+      (let* ((element (caar stream)))
+        (cond
+          ((eq? element "json-num") #t)
+          ((eq? element "json-string") #t)
+          (else #f))))
+    ((= 2 (length stream)) #f)
+    (else
+      (let* ((elem (caar stream))
+             (next (caadr stream)))
+        (if (and 
+              (or (eq? elem "json-string")
+                  (eq? elem "json-num"))
+              (eq? next "elem-delim"))
+            (json:lex-array (cddr stream))
+            #f)))))
+
+(define (json:lex-object stream)
+  (if (null? stream)
+    #t
+    (let* ((element (caar stream))
+           (delim (car (list-ref stream 1)))
+           (val (car (list-ref stream 2)))
+           (val-body (cadr (list-ref stream 2)))
+           (xand (lambda (x y) (if x (eval y) #f)))
+           (value? (lambda (x) (or (eq? x "json-string") (eq? x "json-num")))))
+        (if (and
+              (value? element)
+              (eq? delim "prop-delim") 
+              (or (value? val) 
+                  (xand (eq? val "json-array") '(json:lex-array val-body))
+                  (xand (eq? val "json-object") '(json:lex-object val-body))))
+            (if (> (length stream) 3)
+                (and (eq? (car (list-ref stream 3)) "elem-delim")
+                     (json:lex-object (cddddr stream)))
+                #t)
+            #f))))
