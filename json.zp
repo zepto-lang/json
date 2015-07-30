@@ -1,34 +1,47 @@
-(define (json:tokenize json) (json:_tokenize (string->list json)))
+(define (json:tokenize json) 
+  "tokenizes json to array of tokens; 
+    e.g. input:  \"{'lol': 1}\"
+         output: (json-object ((json-string \"lol\") (prop-delim) (json-num \"1\")))"
+  (cdr (json:_tokenize (string->list json))))
+
+(define (json:tokenize-all json) 
+  "tokenizes json to array of tokens; consumes everything, even if it is multiple disjunctive objects;
+    e.g. input:  \"{'lol': 1}\"
+         output: (json-object ((json-string \"lol\") (prop-delim) (json-num \"1\")))"
+  (define (internal-tokenize input l)
+      (define tuple (json:_tokenize (string->list input)))
+      (if (null? (car tuple))
+        (+= l (cdr tuple))
+        (internal-tokenize (list->string (car tuple)) (+= l (cdr tuple)))))
+  (internal-tokenize json []))
 
 (define (json:_tokenize json-list) 
-  "return json as zepto object; 
-    e.g. input:  \"{'lol': 1}\"
-         output: {'lol' 1}"
-    (let* ((token (car json-list)))
-      (cond ((char=? token #\,) 
-              (list (cdr json-list) ["<elem-delim>" ","]))
-            ((char=? token #\:)
-              (list (cdr json-list) ["<prop-delim>" ":"]))
-            ((or (char=? token #\space) (char=? token #\tab) (char=? token #\newline)) (json:_tokenize (cdr json-list)))
-            ((char=? token #\}) (list json-list '()))
-            ((char=? token #\]) (list json-list '()))
-            ((char=? token #\{) 
-              (begin
-                (define tuple (json:parse-json-object (cdr json-list)))
-                (list (car tuple) (list "json-object" (cadr tuple)))))
-            ((char=? token #\[) 
-              (begin
-                (define tuple (json:parse-json-array (cdr json-list)))
-                (list (car tuple) (list "json-array" (cadr tuple)))))
-            ((or (char=? token #\") (char=? token #\'))
-              (begin
-                (define tuple (json:parse-json-string (cdr json-list) token))
-                (list (car tuple) (list "json-string" (cadr tuple)))))
-            ((char-num? token) 
-              (begin
-                (define tuple (json:parse-json-num json-list))
-                (list (car tuple) (list "json-num" (cadr tuple)))))
-            (else (error (list "Parse error at: " token))))))
+  "internal tokenizer method; takes a list of chars and returns rest and tokenized input"
+  (let* ((token (car json-list)))
+    (cond ((char=? token #\,) 
+            (list (cdr json-list) ["elem-delim" ","]))
+          ((char=? token #\:)
+            (list (cdr json-list) ["prop-delim" ":"]))
+          ((or (char=? token #\space) (char=? token #\tab) (char=? token #\newline)) (json:_tokenize (cdr json-list)))
+          ((char=? token #\}) (list json-list '()))
+          ((char=? token #\]) (list json-list '()))
+          ((char=? token #\{) 
+            (begin
+              (define tuple (json:parse-json-object (cdr json-list)))
+              (list (car tuple) (list "json-object" (cadr tuple)))))
+          ((char=? token #\[) 
+            (begin
+              (define tuple (json:parse-json-array (cdr json-list)))
+              (list (car tuple) (list "json-array" (cadr tuple)))))
+          ((or (char=? token #\") (char=? token #\'))
+            (begin
+              (define tuple (json:parse-json-string (cdr json-list) token))
+              (list (car tuple) (list "json-string" (cadr tuple)))))
+          ((char-num? token) 
+            (begin
+              (define tuple (json:parse-json-num json-list))
+              (list (car tuple) (list "json-num" (cadr tuple)))))
+          (else (error (list "Parse error at: " token))))))
 
 (define (json:parse-json-object l)
   (define (parse-object x s)
@@ -36,7 +49,9 @@
       (list (cdr x) s)
       (begin
         (define tuple (json:_tokenize x))
-        (parse-object (car tuple) (+= s (cadr tuple))))))
+        (if (null? (cadr tuple))
+          (parse-object (car tuple) s)
+          (parse-object (car tuple) (+= s (cadr tuple)))))))
   (parse-object l []))
 
 (define (json:parse-json-array l)
@@ -45,7 +60,9 @@
       (list (cdr x) s)
       (begin
         (define tuple (json:_tokenize x))
-        (parse-array (car tuple) (+= s (cadr tuple))))))
+        (if (null? (cadr tuple))
+          (parse-array (car tuple) s)
+          (parse-array (car tuple) (+= s (cadr tuple)))))))
   (parse-array l []))
 
 (define (json:parse-json-string l token)
