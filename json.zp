@@ -1,10 +1,15 @@
 (load "tokenize.zp")
 (load "lex.zp")
+(load "build.zp")
 
 (define (json:parse elements)
   (let ((tokens (json:tokenize elements)))
-  (json:lex tokens)))
+  (if (json:lex tokens)
+    (json:build-json tokens)
+    :error)))
 
 (define (json:parse-all elements)
   (let ((tokens (json:tokenize-all elements)))
-  (json:lex-all tokens)))
+  (if (json:lex-all tokens)
+    (json:build-json-all tokens)
+    :error)))

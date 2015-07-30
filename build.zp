@@ -1,0 +1,50 @@
+(define (json:build-json stream)
+  (if (null? stream)
+    '()
+    (let* ((token (car stream))
+           (token-key (car token))
+           (token-val (cadr token)))
+        (cond
+          ((or (eq? token-key "json-string") (eq? token-key "json-num"))
+            (json:build-json-simple token))
+          ((eq? token-key "json-array") (json:build-json-array token-val))
+          ((eq? token-key "json-object") (json:build-json-object token-val))))))
+
+(define (json:build-json-all stream)
+  (define (build-all-json tokens acc)
+    (if (null? tokens)
+      acc
+      (begin
+        (define tuple (json:build-json (car tokens)))
+        (build-all-json (cdr tokens) (++ acc tuple)))))
+  (build-json stream '()))
+
+(define (json:build-json-simple value)
+  (let ((key (car value))
+        (val (cadr value)))
+  (cond 
+    ((eq? key "json-string") val)
+    ((eq? key "json-num") (string->number val)))))
+
+(define (json:build-json-array values)
+  (if (null? values)
+    '()
+    (let* ((element (car values))
+           (element-key (car element)))
+      (if
+        (or (eq? element-key "json-string") (eq? element-key "json-num"))
+          (begin
+            (define value (json:build-json-simple element))
+            (++ '() value (json:build-json-array (cdr values))))
+        (json:build-json-array (cdr values))))))
+
+(define (json:build-json-object values)
+  (if (null? values)
+    #{}
+    (let* ((key (car values))
+           (value (list-ref values 2)))
+           (if (> (length values) 3)
+            (make-hash (json:build-json-simple key) (json:build-json (list value))
+                       (json:build-json-object (cddddr values)))
+            (make-hash (json:build-json-simple key) (json:build-json (list value))
+                       (json:build-json-object (cdddr values)))))))
