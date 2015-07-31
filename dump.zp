@@ -1,0 +1,17 @@
+(define (json:stringify elements)
+  (cond
+    ((hash-map? elements) (json:stringify-hashmap elements))
+    ((list? elements) (json:stringify-list elements))
+    ((number? elements) (number->string elements))
+    ((string? elements) (++ "'" elements "'"))
+    (else :error)))
+
+(define (json:stringify-list elements)
+  (++ "[" (string-join (map json:stringify elements) ", ") "]"))
+
+(define (json:stringify-hashmap elements)
+  (let ((keys (hash-keys elements))
+        (make-element
+          (lambda (key)
+            (++ (json:stringify key) ": " (json:stringify (elements key))))))
+    (++ "{" (string-join (map make-element keys) ", ") "}")))

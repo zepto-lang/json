@@ -1,6 +1,7 @@
 (load "tokenize.zp")
 (load "lex.zp")
 (load "build.zp")
+(load "dump.zp")
 
 (define (json:parse elements)
   "parse json to zepto data structure; 
@@ -12,10 +13,14 @@
     :error)))
 
 (define (json:parse-all elements)
-  "parse json to zepto data structure; accumulate multiple structues into list;
+  "parse json to zepto data structure; accumulate multiple structures into list;
     e.g. input:  {'foo': 10}{}
          output: (#{foo: 10, } #{})"
   (let ((tokens (json:tokenize-all elements)))
   (if (json:lex-all tokens)
     (json:build-json-all tokens)
     :error)))
+
+(define (json:dump elements)
+  "converts zepto to json string"
+  (json:stringify elements))
