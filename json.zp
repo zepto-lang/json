@@ -6,20 +6,20 @@
 (define (json:parse elements)
   "parse json to zepto data structure; 
     e.g. input:  {'foo': 10}
-         output: #{foo: 10, }"
+         output: #{foo: 10, }" 
   (let ((tokens (json:tokenize elements)))
-  (if (json:lex tokens)
-    (json:build-json tokens)
-    :error)))
+    (if (json:lex tokens)
+      (json:build-json tokens)
+      :error)))
 
 (define (json:parse-all elements)
   "parse json to zepto data structure; accumulate multiple structures into list;
     e.g. input:  {'foo': 10}{}
          output: (#{foo: 10, } #{})"
   (let ((tokens (json:tokenize-all elements)))
-  (if (json:lex-all tokens)
-    (json:build-json-all tokens)
-    :error)))
+    (if (json:lex-all tokens)
+      (json:build-json-all tokens)
+      :error)))
 
 (define (json:dump elements)
   "converts zepto to json string"
