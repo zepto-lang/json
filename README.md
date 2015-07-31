@@ -22,7 +22,7 @@ Decoding from JSON could look like this:
 
 Encoding to JSON looks like this:
 ```clojure
-(define x (json:dump #{1 (1 2) 3 "something"}))
+(define x (json:dump #{10 (1 2) 3 "something"}))
 ; this will return a string like so:
 ; {10: [1, 2], 3: "something"}
 ```
