@@ -7,5 +7,7 @@
                  11: [1, 2]
                }
              }"))
+(define y (json:dump #{1 (1 2) 3 "something"}))
 (write x)
+(write y)
 ;(and (hash-map? x) (eq? (x "unnamed") 10) (hash-map? (x "lol")))
