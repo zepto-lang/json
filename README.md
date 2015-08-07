@@ -27,7 +27,7 @@ Encoding to JSON looks like this:
 ; {10: [1, 2], 3: "something"}
 ```
 
-Integrity is, of course preserved.
+Integrity is preserved, of course.
 ```clojure
 (define test #{"key" (1 2 3)})
 (hash-eqv? test (json:parse (json:dump test))) ; this yields #t
