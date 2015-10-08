@@ -44,9 +44,9 @@
     (if (< (length stream) 3)
       #f
       (let* ((element (caar stream))
-             (delim (car (list-ref stream 1)))
-             (val (car (list-ref stream 2)))
-             (val-body (cadr (list-ref stream 2)))
+             (delim (car (list:ref stream 1)))
+             (val (car (list:ref stream 2)))
+             (val-body (cadr (list:ref stream 2)))
              (xand (lambda (x y) (if x (eval y) #f)))
              (value? (lambda (x) (or (eq? x "json-string") (eq? x "json-num")))))
           (if (and
@@ -56,7 +56,7 @@
                     (xand (eq? val "json-array") '(json:lex-array val-body))
                     (xand (eq? val "json-object") '(json:lex-object val-body))))
               (if (> (length stream) 3)
-                  (and (eq? (car (list-ref stream 3)) "elem-delim")
+                  (and (eq? (car (list:ref stream 3)) "elem-delim")
                        (json:lex-object (cddddr stream)))
                   #t)
               #f)))))

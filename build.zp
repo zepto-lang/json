@@ -42,7 +42,7 @@
   (if (null? values)
     #{}
     (let* ((key (car values))
-           (value (list-ref values 2)))
+           (value (list:ref values 2)))
            (if (> (length values) 3)
             (make-hash (json:build-json-simple key) (json:build-json (list value))
                        (json:build-json-object (cddddr values)))

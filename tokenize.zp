@@ -39,7 +39,7 @@
             (begin
               (define tuple (json:parse-json-string (cdr json-list) token))
               (list (car tuple) (list "json-string" (cadr tuple)))))
-          ((char-num? token) 
+          ((char:num? token) 
             (begin
               (define tuple (json:parse-json-num json-list))
               (list (car tuple) (list "json-num" (cadr tuple)))))
@@ -84,7 +84,7 @@
   (define (parse-num x s)
     (if (null? x)
       (list x s)
-      (if (char-num? (car x))
+      (if (char:num? (car x))
         (parse-num (cdr x) (++ s (car x)))
         (list x s))))
   (parse-num l ""))
