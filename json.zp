@@ -1,7 +1,7 @@
-(load "tokenize.zp")
-(load "lex.zp")
-(load "build.zp")
-(load "dump.zp")
+(load "json/tokenize.zp")
+(load "json/lex.zp")
+(load "json/build.zp")
+(load "json/dump.zp")
 
 (define (json:parse elements)
   "parse json to zepto data structure; 
