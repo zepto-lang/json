@@ -81,10 +81,11 @@
   (parse-string l ""))
 
 (define (json:parse-json-num l)
-  (define (parse-num x s)
+  (define (parse-num x s dot)
     (if (null? x)
       (list x s)
-      (if (char:num? (car x))
-        (parse-num (cdr x) (++ s (car x)))
-        (list x s))))
-  (parse-num l ""))
+      (cond 
+        ((and dot (eq? #\. (car x))) (parse-num (cdr x) (++ s (car x)) #f))
+        ((char:num? (car x)) (parse-num (cdr x) (++ s (car x)) dot))
+        (else (list x s)))))
+  (parse-num l "" #t))
