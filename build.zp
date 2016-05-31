@@ -31,12 +31,14 @@
     '()
     (let* ((element (car values))
            (element-key (car element)))
-      (if
-        (or (eq? element-key "json-string") (eq? element-key "json-num"))
-          (begin
-            (define value (json:build-json-simple element))
-            (++ '() value (json:build-json-array (cdr values))))
-        (json:build-json-array (cdr values))))))
+      (case element-key
+        (("json-string" "json-num")
+            (cons (json:build-json-simple element)
+                  (json:build-json-array (cdr values))))
+        (("json-object")
+            (cons (json:build-json (list element))
+                  (json:build-json-array (cdr values))))
+        (else (json:build-json-array (cdr values)))))))
 
 (define (json:build-json-object values)
   (if (null? values)

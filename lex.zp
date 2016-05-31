@@ -6,13 +6,13 @@
       (let* ((token (car stream))
              (token-key (car token))
              (token-value (cadr token)))
-        (cond
-          ((eq? token-key "json-array")
+        (case token-key
+          (("json-array")
             (json:lex-array token-value))
-          ((eq? token-key "json-object")
+          (("json-object")
             (json:lex-object token-value))
-          ((eq? token-key "json-num") #t)
-          ((eq? token-key "json-string") (string? token-value))
+          (("json-num") #t)
+          (("json-string") (string? token-value))
           (else #f))))))
 
 (define (json:lex-all stream)
@@ -23,9 +23,9 @@
     ((null? stream) #t)
     ((= 1 (length stream))
       (let* ((element (caar stream)))
-        (cond
-          ((eq? element "json-num") #t)
-          ((eq? element "json-string") #t)
+        (case element
+          (("json-num") #t)
+          (("json-object" "json-string") (json:lex (list (car stream))))
           (else #f))))
     ((= 2 (length stream)) #f)
     (else
@@ -33,9 +33,10 @@
              (next (caadr stream)))
         (if (and 
               (or (eq? elem "json-string")
+                  (eq? elem "json-object")
                   (eq? elem "json-num"))
               (eq? next "elem-delim"))
-            (json:lex-array (cddr stream))
+            (and (json:lex (list (car stream))) (json:lex-array (cddr stream)))
             #f)))))
 
 (define (json:lex-object stream)
