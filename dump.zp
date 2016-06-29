@@ -3,7 +3,7 @@
     ((hash-map? elements) (json:stringify-hashmap elements))
     ((list? elements) (json:stringify-list elements))
     ((number? elements) (number->string elements))
-    ((string? elements) (++ "'" elements "'"))
+    ((string? elements) (++ "\"" elements "\""))
     (else :error)))
 
 (define (json:stringify-list elements)
