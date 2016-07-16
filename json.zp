@@ -24,3 +24,17 @@
 (define (json:dump elements)
   "converts zepto to json string"
   (json:stringify elements))
+
+; JSON pointer utilities
+(define (json:pointer->indices pointer)
+  (define (decode-pointer elem)
+    (|> elem
+        ($ (string:substitute % "~0" "~"))
+        ($ (string:substitute % "~1" "/"))))
+  (map decode-pointer (string:split pointer "/")))
+
+(define (json:pointer-lookup dict pointer . dflt)
+  (if (null? pointer)
+    dict
+    (let ((indices (json:pointer->indices pointer)))
+      (apply get-from dict indices (if (null? dflt) (nil) dflt)))))
