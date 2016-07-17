@@ -27,6 +27,7 @@
 
 ; JSON pointer utilities
 (define (json:pointer->indices pointer)
+  "Convert a JSON pointer to a list of indices"
   (define (decode-pointer elem)
     (|> elem
         ($ (string:substitute % "~0" "~"))
@@ -34,7 +35,38 @@
   (map decode-pointer (string:split pointer "/")))
 
 (define (json:pointer-lookup dict pointer . dflt)
+  "Lookup a JSON pointer in a JSON object."
   (if (null? pointer)
     dict
     (let ((indices (json:pointer->indices pointer)))
       (apply get-from dict indices (if (null? dflt) (nil) dflt)))))
+
+(define (json:apply-patches dict patches)
+  "A function to apply a list of JSON patches to JSON objects.
+    It does not do sanity checking. the \"add\" and \"replace\"
+    operations are equivalent."
+  (reduce (lambda (acc elem) (json:apply-patch acc elem)) dict patches))
+
+(define (json:apply-patch dict patch)
+  "A function to apply a JSON patch to JSON objects.
+    It does not do sanity checking. the \"add\" and \"replace\"
+    operations are equivalent."
+  (let ((op    (get-from patch "op" "noop"))
+        (path  (get-from patch "path")))
+    (case op
+      (("noop") dict)
+      (("remove") (delete-from dict (json:pointer->indices path)))
+      (("add" "replace")
+        (hash:update-in dict (json:pointer->indices path) (get-from patch "value")))
+      (("move") 
+        (let* ((indices (json:pointer->indices path))
+               (val     (get-from dict indices))
+               (removed (delete-from dict indices))
+               (x (write val))
+               (x (write indices))
+               (x (write removed)))
+          (update-in removed (json:pointer->indices (get-from patch "value")) val)))
+      (("copy")
+        (let* ((indices (json:pointer->indices path))
+               (val     (get-from dict indices)))
+          (update-in dict indices val))))))
