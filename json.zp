@@ -57,7 +57,7 @@
       (("noop") dict)
       (("remove") (delete-from dict (json:pointer->indices path)))
       (("add" "replace")
-        (hash:update-in dict (json:pointer->indices path) (get-from patch "value")))
+        (update-in dict (json:pointer->indices path) (get-from patch "value")))
       (("move") 
         (let* ((indices (json:pointer->indices path))
                (val     (get-from dict indices))
