@@ -1,17 +1,15 @@
-(define (json:stringify elements)
-  (cond
-    ((hash-map? elements) (json:stringify-hashmap elements))
-    ((list? elements) (json:stringify-list elements))
-    ((number? elements) (number->string elements))
-    ((string? elements) (++ "\"" elements "\""))
-    (else :error)))
+(defprotocol jsonify (->json 1))
 
-(define (json:stringify-list elements)
-  (++ "[" (string:join (map json:stringify elements) #\,) "]"))
-
-(define (json:stringify-hashmap elements)
-  (let ((keys (hash:keys elements))
-        (make-element
-          (lambda (key)
-            (++ (json:stringify key) ": " (json:stringify (elements key))))))
-    (++ "{" (string:join (map make-element keys) #\,) "}")))
+(defimpl jsonify hash-map?
+         ((->json
+            ($ (let ((keys (hash:keys %))
+                     (make-element
+                       (lambda (key)
+                         (++ (->json key) ": " (->json (% key))))))
+                (++ "{" (string:join (map make-element keys) ", ") "}"))))))
+(defimpl jsonify list?
+        ((->json ($ (++ "[" (string:join (map ->json %) ", ") "]")))))
+(define json-num? ($ (or (integer? %) (float? %))))
+(defimpl jsonify json-num? ((->json number->string)))
+(defimpl jsonify string?
+         ((->json ($ (++ "\"" (regex:gsub r/"/ "\\\"" %) "\"")))))

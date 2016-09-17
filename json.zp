@@ -1,72 +1,121 @@
-(load "json/tokenize.zp")
-(load "json/lex.zp")
-(load "json/build.zp")
-(load "json/dump.zp")
+(module "json"
+  (export
+    `("->json" ,->json)
+    `("parse" ,parse)
+    `("parse-all" ,parse-all)
+    `("dump" ,dump)
+    `("pointer->indices" ,pointer->indices)
+    `("pointer-lookup" ,pointer-lookup)
+    `("apply-patch" ,apply-patch)
+    `("apply-patches" ,apply-patches))
 
-(define (json:parse elements)
-  "parse json to zepto data structure; 
-    e.g. input:  {'foo': 10}
-         output: #{foo: 10, }" 
-  (let ((tokens (json:tokenize elements)))
-    (if (json:lex tokens)
-      (json:build-json tokens)
-      :error)))
+  (loads "json/tokenize.zp" "json/lex.zp" "json/build.zp" "json/dump.zp")
 
-(define (json:parse-all elements)
-  "parse json to zepto data structure; accumulate multiple structures into list;
-    e.g. input:  {'foo': 10}{}
-         output: (#{foo: 10, } #{})"
-  (let ((tokens (json:tokenize-all elements)))
-    (if (json:lex-all tokens)
-      (json:build-json-all tokens)
-      :error)))
+  (parse (lambda (element)
+    "parse json to zepto data structure.
 
-(define (json:dump elements)
-  "converts zepto to json string"
-  (json:stringify elements))
+    Example:
+    <zepto>
+      (json:parse \"{'foo': 10}\") ; #{foo: 10, }
+    </zepto>
 
-; JSON pointer utilities
-(define (json:pointer->indices pointer)
-  "Convert a JSON pointer to a list of indices"
-  (define (decode-pointer elem)
-    (|> elem
-        ($ (string:substitute % "~0" "~"))
-        ($ (string:substitute % "~1" "/"))))
-  (map decode-pointer (string:split pointer "/")))
+    params:
+      - element: the element to parse
+    complexity: O(n)
+    returns: a zepto data structure"
+    (let ((tokens (tokenize element)))
+      (begin
+        (lex tokens)
+        (build-json tokens)))))
 
-(define (json:pointer-lookup dict pointer . dflt)
-  "Lookup a JSON pointer in a JSON object."
-  (if (null? pointer)
-    dict
-    (let ((indices (json:pointer->indices pointer)))
-      (apply get-from dict indices (if (null? dflt) (nil) dflt)))))
+  (parse-all (lambda (elements)
+    "like <fun>json:parse</fun>, but parses multiple structures into a list.
 
-(define (json:apply-patches dict patches)
-  "A function to apply a list of JSON patches to JSON objects.
-    It does not do sanity checking. the \"add\" and \"replace\"
-    operations are equivalent."
-  (reduce (lambda (acc elem) (json:apply-patch acc elem)) dict patches))
+    params:
+      - elements: the elements to parse
+    complexity: O(n)
+    returns: a list of zepto data structures"
+    (let ((tokens (tokenize-all elements)))
+      (begin
+        (write "tokenized")
+        (lex-all tokens)
+        (write "lexed")
+        (build-json-all tokens)))))
 
-(define (json:apply-patch dict patch)
-  "A function to apply a JSON patch to JSON objects.
-    It does not do sanity checking. the \"add\" and \"replace\"
-    operations are equivalent."
-  (let ((op    (get-from patch "op" "noop"))
-        (path  (get-from patch "path")))
-    (case op
-      (("noop") dict)
-      (("remove") (delete-from dict (json:pointer->indices path)))
-      (("add" "replace")
-        (update-in dict (json:pointer->indices path) (get-from patch "value")))
-      (("move") 
-        (let* ((indices (json:pointer->indices path))
-               (val     (get-from dict indices))
-               (removed (delete-from dict indices))
-               (x (write val))
-               (x (write indices))
-               (x (write removed)))
-          (update-in removed (json:pointer->indices (get-from patch "value")) val)))
-      (("copy")
-        (let* ((indices (json:pointer->indices path))
-               (val     (get-from dict indices)))
-          (update-in dict indices val))))))
+  (dump (lambda (element)
+    "converts zepto to json string. The same as <fun>json:->json</fun>.
+
+    params:
+      - element: the elment to jsonify
+    complexity: O(n)
+    returns: the resulting JSON as string"
+    (->json element)))
+
+  (pointer->indices (lambda (pointer)
+    "Convert a JSON pointer to a list of indices.
+
+    params:
+      - pointer: the JSON pointer to convert (as string)
+    complexity: O(n)
+    returns: a list of indices"
+    (define (decode-pointer elem)
+      (|> elem
+          ($ (string:substitute % "~0" "~"))
+          ($ (string:substitute % "~1" "/"))))
+    (map decode-pointer (string:split pointer "/"))))
+
+  (pointer-lookup (lambda (dict pointer . dflt)
+    "Lookup a JSON pointer in a hashmap.
+
+    params:
+      - dict: the hashmap in which to lookup
+      - pointer: the pointer to lookup
+      - dflt: an optional default value
+    complexity: O(n) where n is the length of the pointer list
+    returns: the found or default value"
+    (if (null? pointer)
+      dict
+      (let ((indices (pointer->indices pointer)))
+        (apply get-from dict indices (if (null? dflt) (nil) dflt))))))
+
+  (apply-patches (lambda (dict patches)
+    "A function to apply a list of JSON patches to JSON objects.
+     It does not do sanity checking. the \"add\" and \"replace\"
+     operations are equivalent.
+
+     params:
+       - dict: the hashmap to which patches should be applied
+       - patches: a list of JSON patches
+     complexity: O(n*k) where k is the complexity of <fun>json:apply-patch</fun>
+     returns: <par>dict</par> with all patches applied"
+    (reduce (lambda (acc elem) (apply-patch acc elem)) dict patches)))
+
+  (apply-patch (lambda (dict patch)
+    "A function to apply a JSON patch to JSON objects.
+      It does not do sanity checking. the \"add\" and \"replace\"
+      operations are equivalent.
+
+     params:
+       - dict: the hashmap to which patches should be applied
+       - patch: a JSON patch formatted as a hashmap
+     complexity: O(n*k) where n is the complexity of the option and k is the complexity of the index lookup
+     returns: <par>dict</par> with the patch applied"
+    (let ((op    (get-from patch "op" "noop"))
+          (path  (get-from patch "path")))
+      (case op
+        (("noop") dict)
+        (("remove") (delete-from dict (pointer->indices path)))
+        (("add" "replace")
+          (update-in dict (pointer->indices path) (get-from patch "value")))
+        (("move") 
+          (let* ((indices (pointer->indices path))
+                 (val     (get-from dict indices))
+                 (removed (delete-from dict indices))
+                 (x (write val))
+                 (x (write indices))
+                 (x (write removed)))
+            (update-in removed (pointer->indices (get-from patch "value")) val)))
+        (("copy")
+          (let* ((indices (pointer->indices path))
+                 (val     (get-from dict indices)))
+            (update-in dict indices val))))))))

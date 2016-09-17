@@ -1,4 +1,5 @@
 (load "json.zp")
+(import-all "json")
 
 (define x (json:parse
             "{ \"unnamed\": 10,

@@ -1,63 +1,45 @@
-(define (json:lex stream)
-  (if (null? stream)
-    #f
-    (if (null? (car stream))
-      #f
+(define (lex stream)
+  (cond
+    ((null? stream) (error:from-string "Got an empty token stream"))
+    ((null? (car stream)) (error:from-string "Encountered empty token"))
+    (else
       (let* ((token (car stream))
              (token-key (car token))
              (token-value (cadr token)))
         (case token-key
           (("json-array")
-            (json:lex-array token-value))
+            (lex-array token-value))
           (("json-object")
-            (json:lex-object token-value))
-          (("json-num") #t)
+            (lex-object token-value))
+          (("json-num" "json-null") #t)
           (("json-string") (string? token-value))
-          (else #f))))))
+          (else (error:from-string "Unknown token key" token-key)))))))
 
-(define (json:lex-all stream)
-  (all? json:lex stream))
+(define (lex-all stream) (all? lex stream))
 
-(define (json:lex-array stream)
+(define (lex-array stream)
+  (case (length stream)
+    ((0) #t)
+    ((1)
+      (lex (list (car stream))))
+    ((2) (error:from-string "Unknown token" stream))
+    (else
+      (let* ((next (caadr stream)))
+        (if (eq? next "elem-delim")
+            (and (lex (list (car stream))) (lex-array (cddr stream)))
+            (error:from-string "Expected array delimiter token, got" next))))))
+
+(define (lex-object stream)
   (cond
     ((null? stream) #t)
-    ((= 1 (length stream))
-      (let* ((element (caar stream)))
-        (case element
-          (("json-num") #t)
-          (("json-object" "json-string") (json:lex (list (car stream))))
-          (else #f))))
-    ((= 2 (length stream)) #f)
+    ((< (length stream) 3) (error:from-string "Got an invalid object" stream))
+    ((not (eq? (caadr stream) "prop-delim"))
+      (error:from-string "Expected property delimiter in object, got"
+                         (caadr stream)))
     (else
-      (let* ((elem (caar stream))
-             (next (caadr stream)))
-        (if (and 
-              (or (eq? elem "json-string")
-                  (eq? elem "json-object")
-                  (eq? elem "json-num"))
-              (eq? next "elem-delim"))
-            (and (json:lex (list (car stream))) (json:lex-array (cddr stream)))
-            #f)))))
-
-(define (json:lex-object stream)
-  (if (null? stream)
-    #t
-    (if (< (length stream) 3)
-      #f
-      (let* ((element (caar stream))
-             (delim (car (list:ref stream 1)))
-             (val (car (list:ref stream 2)))
-             (val-body (cadr (list:ref stream 2)))
-             (xand (lambda (x y) (if x (eval y) #f)))
-             (value? (lambda (x) (or (eq? x "json-string") (eq? x "json-num")))))
-          (if (and
-                (value? element)
-                (eq? delim "prop-delim") 
-                (or (value? val) 
-                    (xand (eq? val "json-array") '(json:lex-array val-body))
-                    (xand (eq? val "json-object") '(json:lex-object val-body))))
-              (if (> (length stream) 3)
-                  (and (eq? (car (list:ref stream 3)) "elem-delim")
-                       (json:lex-object (cddddr stream)))
-                  #t)
-              #f)))))
+      (begin
+        (lex (list (caddr stream)))
+        (if (> (length stream) 3)
+          (and (eq? (car (list:ref stream 3)) "elem-delim")
+               (lex-object (cddddr stream)))
+          #t)))))
